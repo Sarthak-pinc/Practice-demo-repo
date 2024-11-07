@@ -1,0 +1,47 @@
+name: Deploy Databricks to QA Environment
+run-name: ${{ github.actor }} Deploy to Databricks QA via Github workflow 
+on: [workflow_dispatch]
+ 
+jobs:
+  main:
+    runs-on: [self-hosted, linux, x64]
+    environment: dev
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+      # Install databricks CLI as per https://docs.databricks.com/dev-tools/cli/databricks-cli.html
+      - name: Install databricks CLI
+        run: |
+         export VERSION="0.220.0"
+         export FILE="databricks_cli_${VERSION}_linux_amd64"
+         # Change into temporary directory.
+         mkdir -p /tmp/databricks-cli
+         cd /tmp/databricks-cli
+
+         #https://github.com/databricks/cli/releases/download/v0.220.0/databricks_cli_0.220.0_linux_amd64.zip
+         export myurl="https://github.com/databricks/cli/releases/download/v${VERSION}/${FILE}.zip"
+
+         echo "my URL ${myurl}"
+         
+         # Download release archive.
+         curl -L -s -O $myurl
+
+         ls -l .
+         
+                  # Unzip release archive.
+         unzip -qo "${FILE}.zip"
+         
+         # Add databricks to path.
+         chmod +x ./databricks
+
+      - name: import code
+        env:
+          DATABRICKS_HOST: ${{ secrets.QA_DB_WORKSPACE }}
+          DATABRICKS_TOKEN: ${{ secrets.QA_DB_TOKEN }}
+        run: |        
+          export mydir=`pwd`
+          ls -l $mydir
+          pwd
+          /tmp/databricks-cli/databricks bundle deploy -t qa
+                    
+          rm -rf /tmp/databricks-cli
